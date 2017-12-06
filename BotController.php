@@ -8,17 +8,30 @@ class BotController extends Website_Controller_Action
         $this->enableLayout();
 
     }
+
+    private function processMessage($update) {
+        $parameters = $update["result"]["parameters"];
+        if($update["result"]["action"] == "startbooking"){
+            $this->sendMessage(array(
+                "source" => $update["result"]["source"],
+                "speech" => "..........TEXT HERE...........",
+                "displayText" => "Hotel in " . $parameters["demi_ort"],
+                "contextOut" => array()
+            ));
+        }
+    }
+
+    private function sendMessage($parameters) {
+        echo json_encode($parameters);
+    }
+
     public function webhookAction() {
 //        $this->disableLayout();
 
-        $hotels = "Ich kann dir folgende Unterkünfte in " . " vorschlagen:\r\n";
-        $hotels .= "Hotel Hillinger\r\n";
-        $hotels .= "arte Hotel Wien\r\n";
-        $hotels .= "Startlight Suiten Wien\r\n";
-        $hotels .= "Star Inn Hotel\r\n";
-
-        header('Content-Type: application/json');
-        $data = ["speech" => $hotels, "displayText" => $hotels];
-        echo json_encode($data);
+        $update_response = file_get_contents("php://input");
+        $update = json_decode($update_response, true);
+        if (isset($update["result"]["action"])) {
+            $this->processMessage($update);
+        }
     }
 }
