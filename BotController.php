@@ -34,6 +34,26 @@ class BotController extends Website_Controller_Action
         return $name;
     }
 
+    private function printAcco($acco) {
+        $attachment = [
+            "color" => "#87B109",
+            "pretext" => "Hier habe ich einige Unterkünfte für dich zusammengestellt:",
+            "title" => $acco->getName(),
+            "text" => "Subline für Hotel 1",
+            "fields" => [
+                [
+                    "title" => "Kinderfreundlich",
+                    "value" => "High",
+                    "short" => false
+                ]
+            ],
+            "image_url" => "http://www.freeridecamps.at/wp-content/uploads/2016/10/Kleinwalsertal-01.png",
+            "thumb_url" => "http://www.freeridecamps.at/wp-content/uploads/2016/10/Kleinwalsertal-01.png",
+            "footer" => "Kleinwalsertal",
+            "footer_icon" => "http://www.freeridecamps.at/wp-content/uploads/2016/10/Kleinwalsertal-01.png",
+        ];
+    }
+
     private function processMessage($update) {
         $parameters = $update["result"]["parameters"];
         if($update["result"]["action"] == "startbooking"){
@@ -42,6 +62,14 @@ class BotController extends Website_Controller_Action
 //                "source" => $update["result"]["source"],
                 "speech" => "Hotel in " . $parameters["demi_ort"] . " für " . $parameters["amount_adults"] . " am " . $parameters["date"] . ": " . $name,
                 "displayText" => "Hotel in " . $parameters["demi_ort"],
+                "data" => [
+                    "slack" => [
+                        "attachments" => [
+                            [
+                            ]
+                        ]
+                    ]
+                ]
 //                "contextOut" => array()
             ));
         }
@@ -52,6 +80,7 @@ class BotController extends Website_Controller_Action
     }
 
     public function webhookAction() {
+        $this->getResponse()->setHeader("X-Robots-Tag", "noindex, nofollow", true);
 //        $this->disableLayout();
 
         $update_response = file_get_contents("php://input");
@@ -59,5 +88,6 @@ class BotController extends Website_Controller_Action
         if (isset($update["result"]["action"])) {
             $this->processMessage($update);
         }
+
     }
 }
