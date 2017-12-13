@@ -18,7 +18,7 @@ class BotController extends Website_Controller_Action
     }
     private function getCategory($category) {
         $categories = new Object_DemiCategory_List();
-        $categories->addConditionParam('name = ' . $category );
+        $categories->addConditionParam('name LIKE "%' . $category . '%"'); // hier vl auf = umstellen
         $categories->setLimit(1);
         return $categories->load();
     }
@@ -52,6 +52,7 @@ class BotController extends Website_Controller_Action
             $description = $acco->getDescription(null, 'de', null);
             $website = $address->getUrl();
             $mGroups = $acco->getMarketingGroups();
+            $mg = null;
             foreach($mGroups as $marketingGroup) {
                 if($marketingGroup->getFid() == "85392dfc-f8dc-4aa7-8c85-55b9ba91817b" || $marketingGroup->getFid() == "ca5d024e-d0d3-457e-8c21-7327fde12890"
                     || $marketingGroup->getFid() == "58e7b7e0-2b4a-4d1c-b9ee-3b57d173dbe7") {
@@ -80,7 +81,17 @@ class BotController extends Website_Controller_Action
                         "short" => true
                     ],
                     [
-                        "title" => $mg["85392dfc-f8dc-4aa7-8c85-55b9ba91817b"] ? "Bestpreisgarantie" : "",
+                        "title" => ($mg && $mg["85392dfc-f8dc-4aa7-8c85-55b9ba91817b"]) ? "Bestpreisgarantie" : "",
+                        "value" => "",
+                        "short" => true
+                    ],
+                    [
+                        "title" => ($mg && $mg["ca5d024e-d0d3-457e-8c21-7327fde12890"]) ? "Sommer Bergbahn inklusive" : "",
+                        "value" => "",
+                        "short" => true
+                    ],
+                    [
+                        "title" => ($mg && $mg["58e7b7e0-2b4a-4d1c-b9ee-3b57d173dbe7"]) ? "Übernachtung inkl. Skipass" : "",
                         "value" => "",
                         "short" => true
                     ],
