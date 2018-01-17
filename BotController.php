@@ -17,22 +17,72 @@ class BotController extends Website_Controller_Action
         return $towns->load();
     }
     private function getCategory($category) {
-        $categories = new Object_DemiCategory_List();
-        $categories->addConditionParam('name LIKE "%' . $category . '%"'); // hier vl auf = umstellen
-        $categories->setLimit(1);
-        return $categories->load();
+
+        if (is_array($category)) {
+            $ids = [];
+            foreach ($category as $c) {
+                if ($c == "keine bevorzugte Unterkunftsart") {
+                    return null;
+                }
+                $categories = new Object_DemiCategory_List();
+                $categories->addConditionParam('name LIKE "%' . $c . '%"');
+                $categories->setOrderKey('order');
+                $categories->setOrder("ASC");
+                $categories->setLimit(1);
+                $ids[] = $categories->load()[0];
+            }
+            return $ids;
+
+        } else {
+            if ($category == "keine bevorzugte Unterkunftsart") {
+                return null;
+            }
+            $categories = new Object_DemiCategory_List();
+            $categories->addConditionParam('name LIKE "%' . $category . '%"'); // hier vl auf = umstellen
+            $categories->setLimit(1);
+            return $categories->load()[0];
+        }
+    }
+
+    private function getStars($param) {
+        // mindestens 3 sterne / maximal 3 sterne auch noch  behandeln
+        $stars = new Object_DemiStars_List();
+        $stars->addConditionParam('name LIKE "%' . $param . '%"');
+        $stars->setLimit(1);
+        return $stars->load();
+    }
+
+    private function getHolidayThemes($param) {
+        $stars = new Object_DemiHolidayTheme_List();
+        return $stars;
     }
 
 
     private function startBooking($parameters) {
         $town = $this->getTown($parameters["demi_ort"]);
-        $category = $this->getCategory($parameters["demi_unterkunftsart"]);
+        $category = $this->getCategory($parameters["unterkunftsart"]);
+        $stars = $this->getStars($parameters["demi_stars"]);
+        $holidayThemes = $this->getHolidayThemes($parameters["interests"]);
         $list = new Object_DemiAccommodationServiceProvider_List();
         if ($town) {
             $list->addConditionParam('town__id = ' . $town[0]->getId());
         }
         if ($category) {
-            $list->addConditionParam('categories LIKE "%,' . $category[0]->getId() . ',%"');
+            if (count($category) > 1) {
+                foreach($category as $c) {
+                    $categoryQuery[] = 'categories LIKE "%,' . $c->getId() . ',%"';
+                }
+                $list->addConditionParam('(' . implode("OR", $categoryQuery) . ')');
+
+            } else {
+                $list->addConditionParam('categories LIKE "%,' . $category[0]->getId() . ',%"');
+            }
+        }
+        if ($stars) {
+//            $list->addConditionParam('stars__id = ' . $stars[0]->getId());
+        }
+        if ($holidayThemes) {
+//            $list->addConditionParam('stars__id = ' . $stars[0]->getId());
         }
         $list->setOrderKey("name");
         $list->setOrder("ASC");
@@ -42,6 +92,8 @@ class BotController extends Website_Controller_Action
 
     private function printAcco($accos) {
         $attachments = array();
+        $i = 0;
+        $color = [ "#87B109", "#ffda29", "#2D9EE0"];
         foreach ($accos as $acco) {
             $image = $acco->getFirstImage(null, null);
             if ($image) {
@@ -60,26 +112,16 @@ class BotController extends Website_Controller_Action
                 }
             }
             $attachment = [
-                "color" => "#87B109",
-//                "pretext" => "Hier habe ich einige Unterkünfte für dich zusammengestellt:",
+//                "id" => $acco->getId(),
+                "color" => $color[$i],
                 "title" => $acco->getName(),
-                "text" => $acco->getCategoryNames(2),
+                "type" => $acco->getCategoryNames(2),
+                "address" => $address->getAddressLine1() . " " . $address->getAddressLine2() . "\n" . $address->getZipcode() . " " . $address->getTown() . " " . $address->getCity(),
+                "classification" => Demi_Website_Helper::desklineStars($acco) ?: "",
+                "website" => $website ?: "-",
+                "description" => strip_tags($description),
+
                 "fields" => [
-                    [
-                        "title" => "Adresse",
-                        "value" => $address->getAddressLine1() . " " . $address->getAddressLine2() . "\n" . $address->getZipcode() . " " . $address->getTown() . " " . $address->getCity(),
-                        "short" => true
-                    ],
-                    [
-                        "title" => "Klassifizierung",
-                        "value" => Demi_Website_Helper::desklineStars($acco) ?: "keine",
-                        "short" => true
-                    ],
-                    [
-                        "title" => "Webste",
-                        "value" => $website ?: "-",
-                        "short" => true
-                    ],
                     [
                         "title" => ($mg && $mg["85392dfc-f8dc-4aa7-8c85-55b9ba91817b"]) ? "Bestpreisgarantie" : "",
                         "value" => "",
@@ -95,37 +137,85 @@ class BotController extends Website_Controller_Action
                         "value" => "",
                         "short" => true
                     ],
-                    [
-                        "title" => "Beschreibung",
-                        "value" => str_replace(["&auml;","&uuml;","&ouml;","&szlig;","&ndash;", "&bull;", "&nbsp;"],["ä","ü","ö","ß", "-", "•"," "],strip_tags($description)),
-                        "short" => false
-                    ],
+
                 ],
                 "image_url" => $thumbnailUrl,
                 "thumb_url" => "https://www.kleinwalsertal.com/static/img/sprite/mobile/best-price-badge.png",
             ];
             $attachments[] = $attachment;
+            $i++;
         }
         return $attachments;
     }
 
     private function processMessage($update) {
         $parameters = $update["result"]["parameters"];
-        if($update["result"]["action"] == "startbooking"){
+        $action = $update["result"]["action"];
+        if(1 == 1 || $action == "booking.not.flexible" || $action == "stars.unterkunft"){
             $list = $this->startBooking($parameters);
-            $attachments = $this->printAcco($list);
-            $this->sendMessage(array(
+
+            if (count($list) > 2) {
+                if ($action == "stars.unterkunft") {
+                    $this->sendMessage(array(
+                        "data" => [
+                            "text" => "Es gibt zu viel Hotels",
+                            "attachments" => null,
+
+                        ],
+                        "speech" => "toomanyhotelsafterstars"
+                    ));
+                } else if ($action == "interests") {
+//                    $this->sendMessage(array(
+//                        "data" => [
+//                            "text" => "Es gibt zu viel Hotels",
+//                            "attachments" => null,
+//
+//                        ],
+//                        "speech" => "toomanyhotelsafterinterests"
+//                    ));
+                    $attachments = $this->printAcco($list);
+                    $this->sendMessage(array(
+                        "data" => [
+                            "text" => "Hier habe ich einige Unterkünfte nach deinen Wünschen für dich zusammengestellt:",
+                            "attachments" => $attachments,
+
+                        ],
+                        "speech" => "hotellist"
+                    ));
+                } else {
+                    $speech = "toomanyhotels";
+                    $this->sendMessage(array(
+                        "data" => [
+                            "text" => "Es gibt zu viel Hotels",
+                            "attachments" => null,
+
+                        ],
+                        "speech" => "toomanyhotels"
+                    ));
+                }
+            } else {
+                $attachments = $this->printAcco($list);
+                $this->sendMessage(array(
+                    "data" => [
+                        "text" => "Hier habe ich einige Unterkünfte für dich zusammengestellt: x",
+                        "attachments" => $attachments,
+
+                    ],
+                    "speech" => "hotellist"
+                ));
+            }
+//            $this->sendMessage(array(
 //                "source" => $update["result"]["source"],
 //                "speech" => "Hotel in " . $parameters["demi_ort"] . " für " . $parameters["amount_adults"] . " am " . $parameters["date"] . ": " . $name,
-                "displayText" => "Hotel in " . $parameters["demi_ort"],
-                "data" => [
-                    "slack" => [
-                        "text" => "*Hier habe ich einige Unterkünfte für dich zusammengestellt:*",
-                        "attachments" => $attachments,
-                    ]
-                ]
+//                "displayText" => "Hotel in " . $parameters["demi_ort"],
+//                "data" => [
+//                        "text" => "Hier habe ich einige Unterkünfte für dich zusammengestellt:",
+//                        "attachments" => $attachments,
+//
+//                ],
+//                "speech" => $speech
 //                "contextOut" => array()
-            ));
+//            ));
         }
     }
 
@@ -134,17 +224,7 @@ class BotController extends Website_Controller_Action
     }
 
     public function webhookAction() {
-//        $list = new Object_DemiAccommodationServiceProvider_List();
-//        $list->addConditionParam('categories LIKE "%,' . "90507" . ',%"');
-//        $list->setOrderKey("name");
-//        $list->setOrder("ASC");
-//        $list->setLimit(1);
-//
-//        foreach ($list as $acco) {
-//            p_r($acco->getId());
-//        }
-//
-//        die();
+
         $this->getResponse()->setHeader("X-Robots-Tag", "noindex, nofollow", true);
 //        $this->disableLayout();
 
