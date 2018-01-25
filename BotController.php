@@ -58,7 +58,7 @@ class BotController extends Website_Controller_Action
     }
 
 
-    private function startBooking($parameters) {
+    private function startBooking($parameters, $limit = 3) {
         $town = $this->getTown($parameters["demi_ort"]);
         $category = $this->getCategory($parameters["unterkunftsart"]);
         $stars = $this->getStars($parameters["demi_stars"]);
@@ -72,10 +72,10 @@ class BotController extends Website_Controller_Action
                 foreach($category as $c) {
                     $categoryQuery[] = 'categories LIKE "%,' . $c->getId() . ',%"';
                 }
-                $list->addConditionParam('(' . implode("OR", $categoryQuery) . ')');
+//                $list->addConditionParam('(' . implode("OR", $categoryQuery) . ')');
 
             } else {
-                $list->addConditionParam('categories LIKE "%,' . $category[0]->getId() . ',%"');
+//                $list->addConditionParam('categories LIKE "%,' . $category[0]->getId() . ',%"');
             }
         }
         if ($stars) {
@@ -86,8 +86,35 @@ class BotController extends Website_Controller_Action
         }
         $list->setOrderKey("name");
         $list->setOrder("ASC");
-        $list->setLimit(3);
+        $list->setLimit($limit);
         return $list->load();
+    }
+
+    private function morePictures($params) {
+        $list = $this->startBooking($params, 1);
+        $acco = $list[0];
+
+        $dateFrom  = new Zend_Date($params['startDate'], "yyyy-MM-dd");
+        $images = $acco->getImageDocuments(array(Deskline_Object_Adapter_AccommodationServiceProvider::DOCUMENT_TYPE_SERVICE_PROVIDER,Deskline_Object_Adapter_AccommodationServiceProvider::DOCUMENT_TYPE_SERVICE_PROVIDER_LOGO), true, $dateFrom);
+
+        $thumbnails = [];
+        foreach ($images as $imageDoc){
+            $image = $imageDoc->getDocument();
+            if ($image instanceof Asset_Image) {
+                if ($image->getFormat() == "portrait") {
+                    $thumbnail = 'demi_responsive_detail_big';
+                } else {
+                    $thumbnail = 'demi_gallery_detail_landscape';
+                }
+
+
+                $thumbnails[] = [
+                    "link" => "https://www.kleinwalsertal.com" . $image->getThumbnail($thumbnail)->getPath(),
+                    "title" => $title = htmlentities($imageDoc->getName())
+                ];
+            }
+        }
+        return $thumbnails;
     }
 
     private function printAcco($accos) {
@@ -151,59 +178,74 @@ class BotController extends Website_Controller_Action
     private function processMessage($update) {
         $parameters = $update["result"]["parameters"];
         $action = $update["result"]["action"];
-        if(1 == 1 || $action == "booking.not.flexible" || $action == "stars.unterkunft"){
-            $list = $this->startBooking($parameters);
+        if ($action == "more.pictures") {
+            $pictures = $this->morePictures($parameters);
+            $this->sendMessage(array(
+                "data" => [
+                    "text" => "Hier sind die gewünschten Bilder:",
+                    "attachments" => $pictures,
 
-            if (count($list) > 2) {
-                if ($action == "stars.unterkunft") {
-                    $this->sendMessage(array(
-                        "data" => [
-                            "text" => "Es gibt zu viel Hotels",
-                            "attachments" => null,
+                ],
+                "speech" => "morepictures"
+            ));
+        } else {
+            if (1 == 1 || $action == "booking.not.flexible" || $action == "stars.unterkunft") {
+                $list = $this->startBooking($parameters,3);
 
-                        ],
-                        "speech" => "toomanyhotelsafterstars"
-                    ));
-                } else if ($action == "interests") {
-//                    $this->sendMessage(array(
-//                        "data" => [
-//                            "text" => "Es gibt zu viel Hotels",
-//                            "attachments" => null,
-//
-//                        ],
-//                        "speech" => "toomanyhotelsafterinterests"
-//                    ));
+                if (count($list) > 2) {
+                    if ($action == "stars.unterkunft") {
+                        $this->sendMessage(array(
+                            "data" => [
+                                "text" => "Es gibt zu viel Hotels",
+                                "attachments" => null,
+
+                            ],
+                            "speech" => "toomanyhotelsafterstars"
+                        ));
+                    } else if ($action == "interests") {
+                        $attachments = $this->printAcco($list);
+                        $this->sendMessage(array(
+                            "data" => [
+                                "text" => "Hier habe ich einige Unterkünfte nach deinen Wünschen für dich zusammengestellt:",
+                                "attachments" => $attachments,
+
+                            ],
+                            "speech" => "hotellist"
+                        ));
+                    } else if ($action == "board") {
+                        $this->sendMessage(array(
+                            "data" => [
+                                "text" => "Es gibt zu viel Hotels",
+                                "attachments" => null,
+
+                            ],
+                            "speech" => "toomanyhotelsafterboard"
+                        ));
+
+
+                    }
+                    else {
+                        $speech = "toomanyhotels";
+                        $this->sendMessage(array(
+                            "data" => [
+                                "text" => "Es gibt zu viel Hotels",
+                                "attachments" => null,
+
+                            ],
+                            "speech" => "toomanyhotels"
+                        ));
+                    }
+                } else {
                     $attachments = $this->printAcco($list);
                     $this->sendMessage(array(
                         "data" => [
-                            "text" => "Hier habe ich einige Unterkünfte nach deinen Wünschen für dich zusammengestellt:",
+                            "text" => "Hier habe ich einige Unterkünfte für dich zusammengestellt: x",
                             "attachments" => $attachments,
 
                         ],
                         "speech" => "hotellist"
                     ));
-                } else {
-                    $speech = "toomanyhotels";
-                    $this->sendMessage(array(
-                        "data" => [
-                            "text" => "Es gibt zu viel Hotels",
-                            "attachments" => null,
-
-                        ],
-                        "speech" => "toomanyhotels"
-                    ));
                 }
-            } else {
-                $attachments = $this->printAcco($list);
-                $this->sendMessage(array(
-                    "data" => [
-                        "text" => "Hier habe ich einige Unterkünfte für dich zusammengestellt: x",
-                        "attachments" => $attachments,
-
-                    ],
-                    "speech" => "hotellist"
-                ));
-            }
 //            $this->sendMessage(array(
 //                "source" => $update["result"]["source"],
 //                "speech" => "Hotel in " . $parameters["demi_ort"] . " für " . $parameters["amount_adults"] . " am " . $parameters["date"] . ": " . $name,
@@ -216,6 +258,7 @@ class BotController extends Website_Controller_Action
 //                "speech" => $speech
 //                "contextOut" => array()
 //            ));
+            }
         }
     }
 
