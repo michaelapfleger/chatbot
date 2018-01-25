@@ -105,8 +105,17 @@
                 imageListOnNode(response.result.fulfillment.data.attachments, responseNode);
               }
 
+            } else if (response.result.fulfillment.speech == "nightsperiod") {
+              console.log("user is flexible - ask for nights period");
+              // setResponseJSON("user is flexible - ask for nights period");
+              setResponseOnNode("Welche Reisedauer bevorzugst du?", responseNode);
+              setTimeout(function(){
+                setResponseOnNode("1-4 Nächte, 3-6 Nächte, 5-8 Nächte, 7-10 Nächte, 10-14 Nächte",createResponseNode());
+              }, 1000);
+
             } else {
               console.log("sonstiges");
+              console.log("action", response.result.action);
               result = response.result.fulfillment.speech;
               setResponseJSON(response);
               setResponseOnNode(result, responseNode);
