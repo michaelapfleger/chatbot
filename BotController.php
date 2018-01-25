@@ -1,7 +1,21 @@
 <?php
 
-class BotController extends Website_Controller_Action
+class Demi2015_BotController extends Demi2015_Website_Controller_Action
 {
+
+    public $params = null;
+
+    public function init()
+    {
+        parent::init();
+
+        Deskline_Init::init();
+
+        $this->view->availableNightRanges = $this->availableNightRanges;
+
+        $this->view->zendDateFormatShort = Zend_Date::DAY.'.'.Zend_Date::MONTH.'.'.Zend_Date::YEAR;
+        $this->view->zendDateFormatLong = Zend_Date::WEEKDAY.', '.Zend_Date::DAY_SHORT . ". " . Zend_Date::MONTH_NAME . " " . Zend_Date::YEAR;
+    }
 
     public function detailAction()
     {
@@ -189,7 +203,16 @@ class BotController extends Website_Controller_Action
                 "speech" => "morepictures"
             ));
         } else {
-            if (1 == 1 || $action == "booking.not.flexible" || $action == "stars.unterkunft") {
+            if ($action == "booking.flexible") {
+                $this->sendMessage(array(
+                    "data" => [
+                        "text" => "Reisedauer",
+                        "attachments" => null,
+
+                    ],
+                    "speech" => "nightsperiod"
+                ));
+            } else {
                 $list = $this->startBooking($parameters,3);
 
                 if (count($list) > 2) {
@@ -225,7 +248,6 @@ class BotController extends Website_Controller_Action
 
                     }
                     else {
-                        $speech = "toomanyhotels";
                         $this->sendMessage(array(
                             "data" => [
                                 "text" => "Es gibt zu viel Hotels",
@@ -267,6 +289,20 @@ class BotController extends Website_Controller_Action
     }
 
     public function webhookAction() {
+
+        $this->getResponse()->setHeader("X-Robots-Tag", "noindex, nofollow", true);
+//        $this->disableLayout();
+
+        $update_response = file_get_contents("php://input");
+        $update = json_decode($update_response, true);
+        if (isset($update["result"]["action"])) {
+            $this->processMessage($update);
+        }
+
+
+    }
+
+    public function copyWebhookAction() {
 
         $this->getResponse()->setHeader("X-Robots-Tag", "noindex, nofollow", true);
 //        $this->disableLayout();
