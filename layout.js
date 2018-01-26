@@ -175,6 +175,9 @@
       var address = document.createElement('p');
       address.innerHTML = value.address;
       child.append(address);
+      var description = document.createElement('p');
+      description.innerHTML = value.description;
+      child.append(description);
       node.appendChild(child);
       console.log( value );
     });

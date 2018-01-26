@@ -73,35 +73,46 @@ class Demi2015_BotController extends Demi2015_Website_Controller_Action
 
 
     private function startBooking($parameters, $limit = 3) {
-        $town = $this->getTown($parameters["demi_ort"]);
-        $category = $this->getCategory($parameters["unterkunftsart"]);
-        $stars = $this->getStars($parameters["demi_stars"]);
-        $holidayThemes = $this->getHolidayThemes($parameters["interests"]);
-        $list = new Object_DemiAccommodationServiceProvider_List();
-        if ($town) {
-            $list->addConditionParam('town__id = ' . $town[0]->getId());
-        }
-        if ($category) {
-            if (count($category) > 1) {
-                foreach($category as $c) {
-                    $categoryQuery[] = 'categories LIKE "%,' . $c->getId() . ',%"';
-                }
-//                $list->addConditionParam('(' . implode("OR", $categoryQuery) . ')');
+//        $town = $this->getTown($parameters["demi_ort"]);
+//        $category = $this->getCategory($parameters["unterkunftsart"]);
+//        $stars = $this->getStars($parameters["demi_stars"]);
+//        $holidayThemes = $this->getHolidayThemes($parameters["interests"]);
+//        $list = new Object_DemiAccommodationServiceProvider_List();
+//        if ($town) {
+//            $list->addConditionParam('town__id = ' . $town[0]->getId());
+//        }
+//        if ($category) {
+//            if (count($category) > 1) {
+//                foreach($category as $c) {
+//                    $categoryQuery[] = 'categories LIKE "%,' . $c->getId() . ',%"';
+//                }
+////                $list->addConditionParam('(' . implode("OR", $categoryQuery) . ')');
+//
+//            } else {
+////                $list->addConditionParam('categories LIKE "%,' . $category[0]->getId() . ',%"');
+//            }
+//        }
+//        if ($stars) {
+////            $list->addConditionParam('stars__id = ' . $stars[0]->getId());
+//        }
+//        if ($holidayThemes) {
+////            $list->addConditionParam('stars__id = ' . $stars[0]->getId());
+//        }
+//        $list->setOrderKey("name");
+//        $list->setOrder("ASC");
+//        $list->setLimit($limit);
+//        return $list->load();
 
-            } else {
-//                $list->addConditionParam('categories LIKE "%,' . $category[0]->getId() . ',%"');
-            }
+        // hier bastel ich mir dann  meinen link zusammen, um die abfrage zu machen -> es soll json zurückkommen, das schick ich dann in die print acco!
+
+        $url = "https://www.kleinwalsertal.com/cdemi?sorting=random&randSeed=72032&ca_rowindex_%5B%5D=&nights=&from=26.01.2018&to=02.02.2018&u0=1&a0=2&c0=0";
+        $data = \Pimcore\Tool::getHttpData($url,[],['probe' => 1]);
+        if ($data) {
+            return json_decode($data,true);
+        } else {
+            return null;
         }
-        if ($stars) {
-//            $list->addConditionParam('stars__id = ' . $stars[0]->getId());
-        }
-        if ($holidayThemes) {
-//            $list->addConditionParam('stars__id = ' . $stars[0]->getId());
-        }
-        $list->setOrderKey("name");
-        $list->setOrder("ASC");
-        $list->setLimit($limit);
-        return $list->load();
+
     }
 
     private function morePictures($params) {
@@ -136,52 +147,35 @@ class Demi2015_BotController extends Demi2015_Website_Controller_Action
         $i = 0;
         $color = [ "#87B109", "#ffda29", "#2D9EE0"];
         foreach ($accos as $acco) {
-            $image = $acco->getFirstImage(null, null);
-            if ($image) {
-                $thumbnail = $image->getThumbnail('demi_responsive_list');
-                $thumbnailUrl = "https://www.kleinwalsertal.com" . $thumbnail->getPath();
-            }
-            $address = $acco->getAddress();
-            $description = $acco->getDescription(null, 'de', null);
-            $website = $address->getUrl();
-            $mGroups = $acco->getMarketingGroups();
-            $mg = null;
-            foreach($mGroups as $marketingGroup) {
-                if($marketingGroup->getFid() == "85392dfc-f8dc-4aa7-8c85-55b9ba91817b" || $marketingGroup->getFid() == "ca5d024e-d0d3-457e-8c21-7327fde12890"
-                    || $marketingGroup->getFid() == "58e7b7e0-2b4a-4d1c-b9ee-3b57d173dbe7") {
-                    $mg[$marketingGroup->getFid()] = $marketingGroup;
-                }
-            }
             $attachment = [
-//                "id" => $acco->getId(),
+                "id" => $acco['acco_id'],
                 "color" => $color[$i],
-                "title" => $acco->getName(),
-                "type" => $acco->getCategoryNames(2),
-                "address" => $address->getAddressLine1() . " " . $address->getAddressLine2() . "\n" . $address->getZipcode() . " " . $address->getTown() . " " . $address->getCity(),
-                "classification" => Demi_Website_Helper::desklineStars($acco) ?: "",
-                "website" => $website ?: "-",
-                "description" => strip_tags($description),
+                "title" => $acco['acco_headline'],
+                "type" => $acco['acco_type'],
+                "address" => $acco['acco_town'],
+                "classification" => $acco['acco_stars'],
+                "description" => $acco['acco_message'] . " " . $acco['acco_message_sub'],
 
-                "fields" => [
-                    [
-                        "title" => ($mg && $mg["85392dfc-f8dc-4aa7-8c85-55b9ba91817b"]) ? "Bestpreisgarantie" : "",
-                        "value" => "",
-                        "short" => true
-                    ],
-                    [
-                        "title" => ($mg && $mg["ca5d024e-d0d3-457e-8c21-7327fde12890"]) ? "Sommer Bergbahn inklusive" : "",
-                        "value" => "",
-                        "short" => true
-                    ],
-                    [
-                        "title" => ($mg && $mg["58e7b7e0-2b4a-4d1c-b9ee-3b57d173dbe7"]) ? "Übernachtung inkl. Skipass" : "",
-                        "value" => "",
-                        "short" => true
-                    ],
-
-                ],
-                "image_url" => $thumbnailUrl,
-                "thumb_url" => "https://www.kleinwalsertal.com/static/img/sprite/mobile/best-price-badge.png",
+//                "fields" => [
+//                    [
+//                        "title" => ($mg && $mg["85392dfc-f8dc-4aa7-8c85-55b9ba91817b"]) ? "Bestpreisgarantie" : "",
+//                        "value" => "",
+//                        "short" => true
+//                    ],
+//                    [
+//                        "title" => ($mg && $mg["ca5d024e-d0d3-457e-8c21-7327fde12890"]) ? "Sommer Bergbahn inklusive" : "",
+//                        "value" => "",
+//                        "short" => true
+//                    ],
+//                    [
+//                        "title" => ($mg && $mg["58e7b7e0-2b4a-4d1c-b9ee-3b57d173dbe7"]) ? "Übernachtung inkl. Skipass" : "",
+//                        "value" => "",
+//                        "short" => true
+//                    ],
+//
+//                ],
+                "image_url" => $acco['acco_thumb'],
+                "detail_url" => $acco['acco_detail_url']
             ];
             $attachments[] = $attachment;
             $i++;
@@ -299,19 +293,6 @@ class Demi2015_BotController extends Demi2015_Website_Controller_Action
             $this->processMessage($update);
         }
 
-
-    }
-
-    public function copyWebhookAction() {
-
-        $this->getResponse()->setHeader("X-Robots-Tag", "noindex, nofollow", true);
-//        $this->disableLayout();
-
-        $update_response = file_get_contents("php://input");
-        $update = json_decode($update_response, true);
-        if (isset($update["result"]["action"])) {
-            $this->processMessage($update);
-        }
 
     }
 }
