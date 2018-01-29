@@ -56,17 +56,20 @@
           var result;
           try {
             if (response.result.fulfillment.speech == "hotellist") {
+
               console.log("response hotellist");
               result = response.result.fulfillment.data.text;
               setResponseJSON(response);
-              setResponseOnNode(response.result.fulfillment.data.pretext, responseNode);
+              setResponseOnNode(response.result.fulfillment.data.text, responseNode);
               hotelListOnNode(response.result.fulfillment.data.attachments, responseNode);
+
             } else if (response.result.fulfillment.speech == "nohotels") {
+
               result = response.result.fulfillment.data.text;
               setResponseJSON(response);
-              setResponseOnNode(response.result.fulfillment.data.pretext, responseNode);
+              setResponseOnNode(response.result.fulfillment.data.text, responseNode);
             } else if (response.result.fulfillment.speech == "toomanyhotels" ) {
-              console.log("too many hotels");
+              console.log("too many hotels, better check stars");
               triggerEvent("stars-unterkunft").then(function (response) {
                 setResponseJSON(response);
                 setResponseOnNode(response.result.fulfillment.speech, responseNode);
