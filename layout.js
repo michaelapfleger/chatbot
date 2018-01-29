@@ -61,6 +61,10 @@
               setResponseJSON(response);
               setResponseOnNode(response.result.fulfillment.data.pretext, responseNode);
               hotelListOnNode(response.result.fulfillment.data.attachments, responseNode);
+            } else if (response.result.fulfillment.speech == "nohotels") {
+              result = response.result.fulfillment.data.text;
+              setResponseJSON(response);
+              setResponseOnNode(response.result.fulfillment.data.pretext, responseNode);
             } else if (response.result.fulfillment.speech == "toomanyhotels" ) {
               console.log("too many hotels");
               triggerEvent("stars-unterkunft").then(function (response) {

@@ -280,7 +280,6 @@ function getJsonResults($acco,$product,$ecImpressionObject,$isPackageSearch,$res
             <?php } ?>
         <?php } ?>
 
-        <!--        price -->
         <?php
         $acco_price = "";
         $acco_meal = "";
@@ -337,7 +336,7 @@ function getJsonResults($acco,$product,$ecImpressionObject,$isPackageSearch,$res
             <?php } ?>
         <?php } ?>
 
-        <!--        rating-->
+
         <?php
         if($acco->getRatingCode() && $acco->$ratingAverageMethod() > 0) { ?>
             <?php $valueAsFiveStar = Demi2015_Website_Helper::getRatingValueAsFiveStarValue($acco->$ratingAverageMethod(),$ratingMaxCount);
@@ -350,8 +349,6 @@ function getJsonResults($acco,$product,$ecImpressionObject,$isPackageSearch,$res
             }
             ?>
         <?php } ?>
-
-        <!--        marketing groups-->
 
         <?php
         $acco_marketing = null;
