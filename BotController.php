@@ -128,6 +128,43 @@ class Demi2015_BotController extends Demi2015_Website_Controller_Action
 
     }
 
+    private function getSorting($param) {
+        if ($param && $param != "") {
+            switch ($param) {
+                case "Preis aufsteigend":
+                    $sorting = "price";
+                    break;
+                case "Sterne aufsteigend";
+                    $sorting = "starsAsc";
+                    break;
+                case "Sterne absteigend";
+                    $sorting = "stars";
+                    break;
+                case "Bewertungen absteigend";
+                    $sorting = "ratingAverage";
+                    break;
+                case "Bewertungen aufsteigend";
+                    $sorting = "ratingAverageAsc";
+                    break;
+                default:
+                    $sorting = null;
+            }
+            return $sorting;
+        } else {
+            return null;
+        }
+    }
+
+    private function getFacilities($params) {
+        if ($params && $params != null && $params != []) {
+            $facilities = new Object_DemiFacility_List();
+            $facilities->addConditionParam('name LIKE "%' . $params . '%" AND active = 1');
+            $facilities->setLimit(1);
+            return $facilities->load();
+        } else {
+            return null;
+        }
+    }
 
     private function startBooking($parameters, $sorting = null) {
         $startDate = new \Zend_Date($parameters['startDate']);
@@ -141,6 +178,8 @@ class Demi2015_BotController extends Demi2015_Website_Controller_Action
         $holidayThemes = $this->getHolidayThemes($parameters["interests"]);
         $period = $this->getPeriod($parameters['period']);
         $adults = $this->getAdults($parameters['adults']);
+        $sortingType = $this->getSorting($parameters['sorting']);
+        $facilities = $this->getFacilities($parameters['facilities']);
 
         if ($town) {
             $townId = $town[0]->getId();
@@ -166,6 +205,11 @@ class Demi2015_BotController extends Demi2015_Website_Controller_Action
             $holidayThemeId = $holidayThemes[0]->getId();
         } else {
             $holidayThemeId = null;
+        }
+        if ($facilities) {
+            $facilityId = $facilities[0]->getId();
+        } else {
+            $facilityId = null;
         }
 
 //        if ($category) {
@@ -205,6 +249,12 @@ class Demi2015_BotController extends Demi2015_Website_Controller_Action
         }
         if ($sorting == "price") {
             $url .= "&sorting=price";
+        }
+        if ($sortingType) {
+            $url .= "&sorting=" . $sortingType;
+        }
+        if ($facilityId) {
+            $url .= "&facilities[]=" . $facilityId;
         }
 
         $data = \Pimcore\Tool::getHttpData($url,[],['probe' => 1]);
@@ -339,6 +389,7 @@ class Demi2015_BotController extends Demi2015_Website_Controller_Action
         }
         if ($action != "booking.flexible" && $action != "more.pictures" && $action != "cheapest.flexible.no" && $action != "cheapest.flexible.yes") {
             $list = $this->startBooking($parameters);
+
             if ($list == null) {
                 $this->sendMessage(array(
                     "data" => [
@@ -349,47 +400,24 @@ class Demi2015_BotController extends Demi2015_Website_Controller_Action
                     "speech" => "nohotels"
                 ));
             } else {
-                if (count($list) > 5) {
-                    if ($action == "stars.unterkunft") {
-                        $this->sendMessage(array(
-                            "data" => [
-                                "text" => "Es gibt zu viel Hotels",
-                                "attachments" => null,
+                if (count($list) > 5 && count($list) < 20 && $action != "display.results") {
+                    $this->sendMessage(array(
+                        "data" => [
+                            "text" => "Ich habe " . count($list) . " Unterkünfte für dich gefunden. Schreib 'anzeigen', um sie darzustellen oder gib ein weiteres Suchkriterium ein.",
+                            "attachments" => null,
 
-                            ],
-                            "speech" => "toomanyhotelsafterstars"
-                        ));
-                    } else if ($action == "interests") {
-                        $attachments = $this->printAcco($list);
-                        $this->sendMessage(array(
-                            "data" => [
-                                "text" => "Hier habe ich einige Unterkünfte nach deinen Wünschen für dich zusammengestellt:",
-                                "attachments" => $attachments,
+                        ],
+                        "speech" => "enoughhotels"
+                    ));
+                } else if (count($list) > 20 && $action != "display.results") {
+                    $this->sendMessage(array(
+                        "data" => [
+                            "text" => "Ich habe " . count($list) . " Unterkünfte für dich gefunden. Bitte gib weitere Suchkriterien ein, um die Auswahl weiter einzuschränken.",
+                            "attachments" => null,
 
-                            ],
-                            "speech" => "hotellist"
-                        ));
-                    } else if ($action == "board") {
-                        $this->sendMessage(array(
-                            "data" => [
-                                "text" => "Es gibt zu viel Hotels",
-                                "attachments" => null,
-
-                            ],
-                            "speech" => "toomanyhotelsafterboard"
-                        ));
-
-
-                    } else {
-                        $this->sendMessage(array(
-                            "data" => [
-                                "text" => "Es gibt zu viel Hotels",
-                                "attachments" => null,
-
-                            ],
-                            "speech" => "toomanyhotels"
-                        ));
-                    }
+                        ],
+                        "speech" => "toomanyhotels"
+                    ));
                 } else {
                     $attachments = $this->printAcco($list);
                     $this->sendMessage(array(

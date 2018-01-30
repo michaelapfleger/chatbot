@@ -31,7 +31,7 @@
     var responseNode = createResponseNode();
     setTimeout(function(){
 
-      setResponseOnNode("Willkommen im Kleinwalsertal! Wie kann ich dir behilflich sein?", responseNode);
+      setResponseOnNode("Willkommen im Kleinwalsertal! Wie kann ich dir bei der Suche nach Unterkünften behilflich sein?", responseNode);
     }, 1000);
     // setAccessTokenButton.addEventListener("click", setAccessToken);
   }
@@ -68,36 +68,19 @@
               result = response.result.fulfillment.data.text;
               setResponseJSON(response);
               setResponseOnNode(response.result.fulfillment.data.text, responseNode);
+            } else if (response.result.fulfillment.speech == "enoughhotels") {
+              setResponseJSON(response);
+              setResponseOnNode(response.result.fulfillment.data.text, responseNode);
             } else if (response.result.fulfillment.speech == "toomanyhotels" ) {
-              console.log("too many hotels, better check stars");
-              triggerEvent("stars-unterkunft").then(function (response) {
+              setResponseJSON(response);
+              setResponseOnNode(response.result.fulfillment.data.text, responseNode);
+            } else if (response.result.fulfillment.speech == "checksorting") {
+              setResponseOnNode(response.result.fulfillment.data.text, responseNode);
+              console.log("immer noch zu viele hotels - sortierung abfragen");
+              triggerEvent("sorting").then(function (response) {
+                console.log("sorting result");
                 setResponseJSON(response);
-                setResponseOnNode(response.result.fulfillment.speech, responseNode);
-                if (response.result.fulfillment.speech == "hotellist") {
-                  hotelListOnNode(response.result.fulfillment.data.attachments, responseNode);
-                }
-              }).catch(function (error) {
-                console.log(error);
-              });
-            } else if (response.result.fulfillment.speech == "toomanyhotelsafterstars") {
-              console.log("too many hotels, better check board");
-              triggerEvent("board").then(function (response) {
-                console.log("board result");
-                setResponseJSON(response);
-                setResponseOnNode(response.result.fulfillment.speech, responseNode);
-                if (response.result.fulfillment.speech == "hotellist") {
-                  hotelListOnNode(response.result.fulfillment.data.attachments, responseNode);
-                }
-              }).catch(function (error) {
-                console.log(error);
-              });
-
-            } else if (response.result.fulfillment.speech == "toomanyhotelsafterboard") {
-              console.log("too many hotels, better check interests");
-              triggerEvent("interests").then(function (response) {
-                console.log("interests result");
-                setResponseJSON(response);
-                setResponseOnNode(response.result.fulfillment.speech, responseNode);
+                setResponseOnNode(response.result.fulfillment.data.text, responseNode);
                 if (response.result.fulfillment.speech == "hotellist") {
                   hotelListOnNode(response.result.fulfillment.data.attachments, responseNode);
                 }

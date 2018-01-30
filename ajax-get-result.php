@@ -362,6 +362,36 @@ function getJsonResults($acco,$product,$ecImpressionObject,$isPackageSearch,$res
             $acco_marketing[] = "skipass";
         }
         ?>
+        <?php if ($facilities = $acco->getFacilities()) {
+            $sortedFacilities = [];
+            if(!empty($facilities)) {
+                foreach($facilities as $facilityColl) {
+                    $facility = $facilityColl->getFacility();
+                    if($facility) {
+                        $facGroup = $facility->getFacilityGroup();
+                        if($facGroup) { //$facGroup
+                            if(! isset($sortedFacilities[$facGroup->getId()])) {
+                                $sortedFacilities[$facGroup->getId()] = [
+                                    "name" => $facGroup->getName(),
+                                    "keyname" => $facGroup->getName("de"),
+                                    "facilities" => []
+                                ];
+                            }
+                            $facName = $facility->getName();
+                            if ($facility->getValueType() == "IntDigit") {
+                                $facName .= ": " . $facilityColl->getFacilityValue();
+                            }
+                            $sortedFacilities[$facGroup->getId()]["facilities"][] = $facName;
+                        }
+                    }
+
+                }
+            }
+        }
+
+
+
+        ?>
 
         <?php
         $hotelrow = [
@@ -383,7 +413,8 @@ function getJsonResults($acco,$product,$ecImpressionObject,$isPackageSearch,$res
             'acco_meal'         => $acco_meal,
             'acco_rating'       => $valueAsFiveStar,
             'acco_total_rating' => $totalRatings,
-            'acco_rating_img'   => $ratingImg
+            'acco_rating_img'   => $ratingImg,
+            'acco_facilities'   => $sortedFacilities
         ];
         return $hotelrow;
 
