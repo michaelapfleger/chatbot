@@ -31,7 +31,7 @@
     var responseNode = createResponseNode();
     setTimeout(function(){
 
-      setResponseOnNode("Willkommen im Kleinwalsertal! Wie kann ich dir bei der Suche nach Unterkünften behilflich sein?", responseNode);
+      setResponseOnNode("Willkommen im Kleinwalsertal! Wie kann ich dir bei deiner Suche nach Unterkünften behilflich sein?", responseNode);
     }, 1000);
     // setAccessTokenButton.addEventListener("click", setAccessToken);
   }
@@ -61,19 +61,32 @@
               result = response.result.fulfillment.data.text;
               setResponseJSON(response);
               setResponseOnNode(response.result.fulfillment.data.text, responseNode);
-              hotelListOnNode(response.result.fulfillment.data.attachments, responseNode);
+              setResponseOnNode(response.result.fulfillment.data.selection, createResponseNode());
+              hotelListOnNode(response.result.fulfillment.data.attachments, createResponseNode());
 
             } else if (response.result.fulfillment.speech == "nohotels") {
-
               result = response.result.fulfillment.data.text;
               setResponseJSON(response);
               setResponseOnNode(response.result.fulfillment.data.text, responseNode);
+              setResponseOnNode(response.result.fulfillment.data.selection, createResponseNode());
+              if (response.result.fulfillment.data.attachments) { // ich habe substitutes gefunden
+                console.log("new params",response.result.fulfillment.data.newParams);
+                triggerEventWithParams("substitutes", response.result.fulfillment.data.newParams).then(function (eventResponse) {
+                  console.log("adapting the parameters",eventResponse);
+                  setResponseOnNode(response.result.fulfillment.data.newText, createResponseNode());
+                  setResponseOnNode(response.result.fulfillment.data.newSelection, createResponseNode());
+                }).catch(function (error) {
+                  console.log(error);
+                });
+              }
             } else if (response.result.fulfillment.speech == "enoughhotels") {
               setResponseJSON(response);
               setResponseOnNode(response.result.fulfillment.data.text, responseNode);
+              setResponseOnNode(response.result.fulfillment.data.selection, createResponseNode());
             } else if (response.result.fulfillment.speech == "toomanyhotels" ) {
               setResponseJSON(response);
               setResponseOnNode(response.result.fulfillment.data.text, responseNode);
+              setResponseOnNode(response.result.fulfillment.data.selection, createResponseNode());
             } else if (response.result.fulfillment.speech == "checksorting") {
               setResponseOnNode(response.result.fulfillment.data.text, responseNode);
               console.log("immer noch zu viele hotels - sortierung abfragen");
