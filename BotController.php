@@ -19,6 +19,13 @@ class Demi2015_BotController extends Demi2015_Website_Controller_Action
 
     public function detailAction()
     {
+        $this->getResponse()->setHeader("X-Robots-Tag", "noindex, nofollow", true);
+        $this->enableLayout();
+
+    }
+    public function probeAction()
+    {
+        $this->getResponse()->setHeader("X-Robots-Tag", "noindex, nofollow", true);
         $this->enableLayout();
 
     }
@@ -209,7 +216,7 @@ class Demi2015_BotController extends Demi2015_Website_Controller_Action
         }
         if ($facilities) {
             $facilityId = $facilities[0]->getId();
-            $selection[] = $facilities;
+            $selection[] = $parameters['facilities'];
         } else {
             $facilityId = null;
         }
@@ -350,7 +357,7 @@ class Demi2015_BotController extends Demi2015_Website_Controller_Action
         }
         if ($facilities) {
             $facilityId = $facilities[0]->getId();
-            $selection[] = $facilities;
+            $selection[] = $parameters['facilities'];
         } else {
             $facilityId = null;
         }
@@ -417,30 +424,53 @@ class Demi2015_BotController extends Demi2015_Website_Controller_Action
     }
 
     private function morePictures($params) {
-        $list = $this->startBooking($params);
-        $acco = $list[0];
+        $key = null;
+        $result = $this->startBooking($params);
+        $list = $result['data'];
 
-        $dateFrom  = new Zend_Date($params['startDate'], "yyyy-MM-dd");
-        $images = $acco->getImageDocuments(array(Deskline_Object_Adapter_AccommodationServiceProvider::DOCUMENT_TYPE_SERVICE_PROVIDER,Deskline_Object_Adapter_AccommodationServiceProvider::DOCUMENT_TYPE_SERVICE_PROVIDER_LOGO), true, $dateFrom);
+        if (array_key_exists("hotelnumber",$params) && $params["hotelnumber"] != "") {
+            $key = intval($params['hotelnumber']);
+        }
+        if ($list && $key && count($list) >= $key) {
+            $accoId = $list[$key-1]['acco_id'];
 
-        $thumbnails = [];
-        foreach ($images as $imageDoc){
-            $image = $imageDoc->getDocument();
-            if ($image instanceof Asset_Image) {
-                if ($image->getFormat() == "portrait") {
-                    $thumbnail = 'demi_responsive_detail_big';
-                } else {
-                    $thumbnail = 'demi_gallery_detail_landscape';
+            if ($accoId) {
+                /** @var Demi_AccommodationServiceProvider $acco */
+                $acco = Demi_AccommodationServiceProvider::getById($accoId);
+                if ($acco) {
+
+                    $dateFrom = new Zend_Date($params['startDate'], "yyyy-MM-dd");
+                    $images = $acco->getImageDocuments(array(Deskline_Object_Adapter_AccommodationServiceProvider::DOCUMENT_TYPE_SERVICE_PROVIDER, Deskline_Object_Adapter_AccommodationServiceProvider::DOCUMENT_TYPE_SERVICE_PROVIDER_LOGO), true, $dateFrom);
+
+                    $thumbnails = [];
+                    foreach ($images as $imageDoc) {
+                        $image = $imageDoc->getDocument();
+                        if ($image instanceof Asset_Image) {
+                            if ($image->getFormat() == "portrait") {
+                                $thumbnail = 'demi_responsive_detail_big';
+                            } else {
+                                $thumbnail = 'demi_gallery_detail_landscape';
+                            }
+
+
+                            $thumbnails[] = [
+                                "link" => "https://www.kleinwalsertal.com" . $image->getThumbnail($thumbnail)->getPath(),
+                                "title" => $title = htmlentities($imageDoc->getName())
+                            ];
+                        }
+                    }
+                    return $thumbnails;
                 }
-
-
-                $thumbnails[] = [
-                    "link" => "https://www.kleinwalsertal.com" . $image->getThumbnail($thumbnail)->getPath(),
-                    "title" => $title = htmlentities($imageDoc->getName())
-                ];
             }
         }
-        return $thumbnails;
+        return null;
+    }
+
+    private function showEvents($params) {
+        $startDate = $params['startDate'];
+        $endDate = $params['endDate'];
+        $url = "https://www.kleinwalsertal.com/de/aktuelles-und-service/events?category=0&keyword=&from=" . $startDate . "&to=" . $endDate;
+        return $url;
     }
 
     private function printAcco($accos) {
@@ -458,7 +488,8 @@ class Demi2015_BotController extends Demi2015_Website_Controller_Action
                 "description" => $acco['acco_message'] . " " . $acco['acco_message_sub'],
                 "board" => $acco['acco_meal'],
                 "image_url" => $acco['acco_thumb'],
-                "detail_url" => $acco['acco_detail_url']
+                "detail_url" => $acco['acco_detail_url'],
+                "price"     => $acco['acco_price']
             ];
             $attachments[] = $attachment;
             $i++;
@@ -483,15 +514,16 @@ class Demi2015_BotController extends Demi2015_Website_Controller_Action
         if ($action == "booking.flexible") {
             $this->sendMessage(array(
                 "data" => [
-                    "text" => "Reisedauer",
+                    "text" => "Welche Reisedauer bevorzugst du?",
                     "attachments" => null,
+                    "options"   => "1 - 4 Nächte, 3 - 6 Nächte, 5 - 8 Nächte, 7 - 10 Nächte, 10 - 14 Nächte"
 
                 ],
                 "speech" => "nightsperiod"
             ));
 
         }
-        if ($action == "cheapest.flexible.no" || $action == "cheapest.flexible.yes") {
+        if ($action != "booking.flexible" && $action != "more.pictures" && ($action == "cheapest.flexible.no" || $action == "cheapest.flexible.yes")) {
             $result = $this->startBooking($parameters,"price");
             $list = $result['data'];
             $text = $result['text'];
@@ -534,11 +566,23 @@ class Demi2015_BotController extends Demi2015_Website_Controller_Action
 
             }
         }
-        if ($action != "booking.flexible" && $action != "more.pictures" && $action != "cheapest.flexible.no" && $action != "cheapest.flexible.yes") {
+        if ($action == "show.events")  {
+            $url = $this->showEvents($parameters);
+            $this->sendMessage(array(
+                "data" => [
+                    "text" => "Hier sind einige Veranstaltungen, die während deines Auftenthaltes stattfinden:",
+                    "url" => $url
+
+                ],
+                "speech" => "showevents"
+            ));
+        }
+        if ($action != "booking.flexible" && $action != "show.events" && $action != "more.pictures" && $action != "cheapest.flexible.no" && $action != "cheapest.flexible.yes") {
             $result = $this->startBooking($parameters);
             $list = $result['data'];
             $text = $result['text'];
             $url = $result['url'];
+
 
             if ($list == null) {
                 $newResult = $this->substitutes($parameters);
@@ -552,7 +596,7 @@ class Demi2015_BotController extends Demi2015_Website_Controller_Action
                         "selection" => $text,
                         "url"       => $url,
                         "newText" => "Aber ich habe " . count($newList) > 1 ? count($newList) . " Ergebnisse" : count($newList) . " Ergebnis" . "  zu folgenden Kriterien: " . $newText,
-                        "newSelection" => "Schreib 'anzeigen', um die Vorschläge darzustellen oder ändere deine Suchanfrage.",
+                        "newSelection" => "Ich kann sie dir anzeigen oder du änderst deine Suchanfrage, indem du ein oder mehrere Kriterien abwandelst.",
                         "attachments" => $newList,
                         "newParams" => $newParams,
                         "newUrl" => $newUrl
@@ -564,7 +608,7 @@ class Demi2015_BotController extends Demi2015_Website_Controller_Action
                 if (count($list) > 5 && count($list) < 20 && $action != "display.results") {
                     $this->sendMessage(array(
                         "data" => [
-                            "text" => "Ich habe " . count($list) . " Unterkünfte für dich gefunden. Schreib 'anzeigen', um sie darzustellen oder gib ein weiteres Suchkriterium ein.",
+                            "text" => "Ich habe " . count($list) . " Unterkünfte für dich gefunden. Ich kann sie dir anzeigen oder du gibst ein weiteres Suchkriterium ein.",
                             "attachments" => null,
                             "selection" => $text
 
@@ -585,7 +629,7 @@ class Demi2015_BotController extends Demi2015_Website_Controller_Action
                     $attachments = $this->printAcco($list);
                     $this->sendMessage(array(
                         "data" => [
-                            "text" => "Hier habe ich einige Unterkünfte für dich zusammengestellt:",
+                            "text" => "Diese Unterkünfte treffen auf deine Kriterien zu:",
                             "attachments" => $attachments,
                             "selection" => $text
 

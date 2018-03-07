@@ -30,8 +30,8 @@
     queryInput.addEventListener("keydown", queryInputKeyDown);
     var responseNode = createResponseNode();
     setTimeout(function(){
-
       setResponseOnNode("Willkommen im Kleinwalsertal! Wie kann ich dir bei deiner Suche nach Unterkünften behilflich sein?", responseNode);
+      queryInput.style.display = "block";
     }, 1000);
     // setAccessTokenButton.addEventListener("click", setAccessToken);
   }
@@ -61,8 +61,8 @@
               result = response.result.fulfillment.data.text;
               setResponseJSON(response);
               setResponseOnNode(response.result.fulfillment.data.text, responseNode);
-              setResponseOnNode(response.result.fulfillment.data.selection, createResponseNode());
               hotelListOnNode(response.result.fulfillment.data.attachments, createResponseNode());
+              setResponseOnNode(response.result.fulfillment.data.selection, createResponseNode());
 
             } else if (response.result.fulfillment.speech == "nohotels") {
               result = response.result.fulfillment.data.text;
@@ -110,11 +110,14 @@
 
             } else if (response.result.fulfillment.speech == "nightsperiod") {
               console.log("user is flexible - ask for nights period");
-              // setResponseJSON("user is flexible - ask for nights period");
-              setResponseOnNode("Welche Reisedauer bevorzugst du?", responseNode);
-              setTimeout(function(){
-                setResponseOnNode("1-4 Nächte, 3-6 Nächte, 5-8 Nächte, 7-10 Nächte, 10-14 Nächte",createResponseNode());
+              setResponseOnNode(response.result.fulfillment.data.text, responseNode);
+              setTimeout(function () {
+                setResponseOnNode(response.result.fulfillment.data.options, createResponseNode());
               }, 1000);
+
+            } else if (response.result.fulfillment.speech == "showevents") {
+              console.log("show events");
+              setResponseLinkOnNode(response, responseNode);
 
             } else {
               console.log("sonstiges");
@@ -137,93 +140,130 @@
 
   function createQueryNode(query) {
     var node = document.createElement('div');
-    node.className = "clearfix right-align right card-panel green accent-1";
+    node.className = "clearfix right-align right chatbot-text filter-navigation";
     node.innerHTML = query;
     resultDiv.appendChild(node);
   }
 
   function createResponseNode() {
+    var wrapper = document.createElement('div');
+    wrapper.className = "chatbot-text-wrapper clearfix";
     var node = document.createElement('div');
-    node.className = "clearfix left-align left card-panel blue-text text-darken-2 hoverable";
-    node.innerHTML = "...";
-    resultDiv.appendChild(node);
-    return node;
+    node.className = "chatbot-icon";
+    wrapper.appendChild(node);
+    var textNode = document.createElement('div');
+    textNode.className = "left-align left chatbot-text filter-navigation";
+    textNode.innerHTML = "...";
+    wrapper.appendChild(textNode);
+    resultDiv.appendChild(wrapper);
+    return textNode;
   }
 
   function setResponseOnNode(response, node) {
     node.innerHTML = response ? response : "[empty response]";
     node.setAttribute('data-actual-response', response);
     scrollToMessage();
-
-    // var image = document.createElement('img');
-    // image.src = "https://www.kleinwalsertal.com/website/var/tmp/image-thumbnails/160000/168628/thumb__portal-headerslide/traumskiwochen-1400x794.jpeg";
-    // node.appendChild(image);
+  }
+  function setResponseLinkOnNode(response, node) {
+    node.innerHTML = response.result.fulfillment.data.text + "\n";
+    var link = document.createElement('a');
+    link.className = "btn btn-success btn-radius-2";
+    link.href = response.result.fulfillment.data.url;
+    link.innerHTML = "anzeigen";
+    link.target = "_blank";
+    node.append(link);
+    var download = document.createElement('a');
+    download.className = "btn btn-success btn-radius-2";
+    // link.href = response.url;
+    download.innerHTML = "als PDF herunterladen";
+    download.target = "_blank";
+    node.append(download);
+    scrollToMessage();
   }
 
   function hotelListOnNode(response,node) {
     node.innerHTML = "";
+    var slick = document.createElement('div');
+    slick.className = "detail-slick col-sm-12";
+    var length = response.length;
     $.each( response, function( key, value ) {
       var child = document.createElement('div');
-      child.className = "attachment";
+      child.className = length == 1 ? "col-sm-12 margin-bottom-20 content-box " : "col-sm-6 margin-bottom-20 content-box ";
       var headline = document.createElement('h4');
       headline.innerHTML = value.title + " " + value.classification;
-      child.append(headline);
-      var image = document.createElement('img');
-      image.src = value.image_url;
-      image.height = 200;
-      child.append(image);
+      child.appendChild(headline);
       var text = document.createElement('p');
       text.innerHTML = value.type;
-      child.append(text);
+      child.appendChild(text);
       var address = document.createElement('p');
-      address.innerHTML = value.address;
-      child.append(address);
+      address.innerHTML = "in " +value.address;
+      child.appendChild(address);
       var description = document.createElement('p');
+      description.className = "bold";
       description.innerHTML = value.description;
-      child.append(description);
-      node.appendChild(child);
+      var price = document.createElement('p');
+      price.className = "bold";
+      price.innerHTML = value.price;
+      child.appendChild(description);
+      child.appendChild(price);
+      var details = document.createElement('a');
+      details.className = "btn btn-success btn-radius-2";
+      details.href = value.detail_url;
+      details.innerHTML = "Details";
+      details.target = "_blank";
+      // var fotos = document.createElement('a');
+      // fotos.className = "btn btn-success btn-radius-2";
+      // fotos.innerHTML("Fotos");
+      // fotos.onclick = function(){
+      //   sende foto anfrage!
+      // console.log(value);
+      // sendText("Zeig mir mehr Bilder");
+      // };
+
+      var responsive = document.createElement('div');
+      responsive.className = "embed-responsive embed-responsive-3by2";
+      var image = document.createElement('img');
+      image.className = "embed-responsive-item";
+      image.src = value.image_url;
+      responsive.appendChild(image);
+      child.appendChild(responsive);
+      // child.appendChild(fotos);
+      child.appendChild(details);
+      slick.appendChild(child);
+
+      node.appendChild(slick);
       console.log( value );
     });
-    scrollToMessage();
+    node.appendChild(slick);
+    // scrollToMessage();
   }
+
 
 
   function imageListOnNode(response, node) {
     node.innerHTML = "";
-    node.className = "detail-slick clearfix card-panel hoverable detail-slick";
+    node.className = "col-sm-12 left-align left chatbot-text filter-navigation images";
+    var slickNode = document.createElement('div');
+    slickNode.className = " col-sm-12";
     $.each( response, function( key, value ) {
       if (key < 10) {
-        var slick = document.createElement('div');
-        slick.className = "detail-slick__item";
+        // var slick = document.createElement('div');
+        //   slick.className = "detail-slick__item";
         var embed = document.createElement('div');
-        embed.className = "embed-responsive embed-responsive-3by2";
+        embed.className = "image-gallery";
         var image = document.createElement('img');
         image.title = value['title'];
-        image.src = value['link'];
+        image.setAttribute('src',value['link']);
+        image.className = "embed-responsive-item";
         image.height = 200;
         embed.append(image);
-        slick.append(embed);
-        node.append(slick);
+        // slick.append(embed);
+        slickNode.appendChild(embed);
       }
-      // child.className = "attachment";
-      // var headline = document.createElement('h4');
-      // headline.innerHTML = value.title + " " + value.classification;
-      // child.append(headline);
-      // var image = document.createElement('img');
-      // image.src = value.image_url;
-      // image.height = 200;
-      // child.append(image);
-      // var text = document.createElement('p');
-      // text.innerHTML = value.type;
-      // child.append(text);
-      // var address = document.createElement('p');
-      // address.innerHTML = value.address;
-      // child.append(address);
-      // node.appendChild(child);
-      // console.log( value );
     });
-
-    // $.getScript('slick.min.js').done(function () {
+    node.appendChild(slickNode);
+    //
+    // $.getScript('/static/demi2015/js/libs/slick.min.js').done(function () {
     //   $('.detail-slick').slick({
     //     lazyLoad: 'progressive',
     //     mobileFirst: true,
@@ -231,7 +271,6 @@
     //     slidesToScroll: 1
     //   });
     // });
-    // $('.slick-slider').
     scrollToMessage();
   }
 
@@ -248,9 +287,9 @@
 
 
   function scrollToMessage() {
-    if ($('#result-wrapper').height() > 800) {
+    if ($('#result-wrapper').height() > 600) {
       $('html, body').animate({
-        scrollTop: $("#q").offset().top - 100
+        scrollTop: $("#q").offset().top - 300
       }, 2000);
     }
   }
