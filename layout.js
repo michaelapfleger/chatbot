@@ -100,11 +100,11 @@
               }).catch(function (error) {
                 console.log(error);
               });
-            } else if (response.result.fulfillment.speech == "morepictures") {
+            } else if (response.result.fulfillment.speech == "showpictures") {
               console.log("bilder");
               setResponseJSON(response);
               // setResponseOnNode(response.result.fulfillment.speech, responseNode);
-              if (response.result.fulfillment.speech == "morepictures") {
+              if (response.result.fulfillment.speech == "showpictures") {
                 imageListOnNode(response.result.fulfillment.data.attachments, responseNode);
               }
 
@@ -118,6 +118,10 @@
             } else if (response.result.fulfillment.speech == "showevents") {
               console.log("show events");
               setResponseLinkOnNode(response, responseNode);
+            } else if (response.result.fulfillment.speech == "showrating") {
+              console.log("show Rating im js");
+              setResponseJSON(response);
+              setResponseOnNode(response.result.fulfillment.data.text, responseNode);
 
             } else {
               console.log("sonstiges");
@@ -206,6 +210,20 @@
       price.innerHTML = value.price;
       child.appendChild(description);
       child.appendChild(price);
+      var select = document.createElement('a');
+      select.className = "btn btn-success btn-radius-2";
+      select.innerHTML = "Unterkunft auswählen";
+      // on-click-function hier drauflegen!
+      select.onclick = function(){
+        //   sende foto anfrage!
+        console.log("trigger event zum unterkunft auswählen");
+        triggerEventWithParams("select_accomodation", {"accoId": value.id , "accoName": value.title}).then(function (eventResponse) {
+          console.log("eventResponse",eventResponse);
+          setResponseOnNode(eventResponse.result.fulfillment.speech, createResponseNode());
+        });
+      };
+
+
       var details = document.createElement('a');
       details.className = "btn btn-success btn-radius-2";
       details.href = value.detail_url;
@@ -228,6 +246,7 @@
       responsive.appendChild(image);
       child.appendChild(responsive);
       // child.appendChild(fotos);
+      child.appendChild(select);
       child.appendChild(details);
       slick.appendChild(child);
 
