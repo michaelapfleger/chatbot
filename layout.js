@@ -103,18 +103,13 @@
             } else if (response.result.fulfillment.speech == "showpictures") {
               console.log("bilder");
               setResponseJSON(response);
-              // setResponseOnNode(response.result.fulfillment.speech, responseNode);
-              if (response.result.fulfillment.speech == "showpictures") {
-                imageListOnNode(response.result.fulfillment.data.attachments, responseNode);
-              }
-
+              imageListOnNode(response.result.fulfillment.data.attachments, responseNode);
             } else if (response.result.fulfillment.speech == "nightsperiod") {
               console.log("user is flexible - ask for nights period");
               setResponseOnNode(response.result.fulfillment.data.text, responseNode);
               setTimeout(function () {
                 setResponseOnNode(response.result.fulfillment.data.options, createResponseNode());
               }, 1000);
-
             } else if (response.result.fulfillment.speech == "showevents") {
               console.log("show events");
               setResponseLinkOnNode(response, responseNode);
@@ -122,7 +117,28 @@
               console.log("show Rating im js");
               setResponseJSON(response);
               setResponseOnNode(response.result.fulfillment.data.text, responseNode);
-
+              setWidgetOnNode(response.result.fulfillment.data.widget, createResponseNode());
+            } else if (response.result.fulfillment.speech == "showpaymentmethods") {
+              setResponseJSON(response);
+              setResponseOnNode(response.result.fulfillment.data.text, responseNode);
+            } else if (response.result.fulfillment.speech == "showlocation") {
+              setResponseJSON(response);
+              setResponseOnNode(response.result.fulfillment.data.address, responseNode);
+              setResponseOnNode(response.result.fulfillment.data.text, createResponseNode());
+              setMapsonNode(response.result.fulfillment.data.maps, createResponseNode());
+            } else if (response.result.fulfillment.speech == "showcriteria") {
+              setResponseJSON(response);
+              setResponseOnNode(response.result.fulfillment.data.text, responseNode);
+            } else if (response.result.fulfillment.speech == "showcontact") {
+              setResponseJSON(response);
+              setResponseOnNode(response.result.fulfillment.data.text, responseNode);
+              setContactOnNode(response.result.fulfillment.data, createResponseNode());
+            } else if (response.result.fulfillment.speech == "showfacilities") {
+              setResponseJSON(response);
+              setResponseOnNode(response.result.fulfillment.data.text, responseNode);
+              setFacilitiesOnNode(response.result.fulfillment.data.wellness, "wellness", createResponseNode());
+              setFacilitiesOnNode(response.result.fulfillment.data.sport, "sport-freizeit", createResponseNode());
+              setFacilitiesOnNode(response.result.fulfillment.data.einrichtungen, "einrichtungen-betrieb", createResponseNode());
             } else {
               console.log("sonstiges");
               console.log("action", response.result.action);
@@ -184,7 +200,55 @@
     node.append(download);
     scrollToMessage();
   }
+  function setContactOnNode(data,node) {
+    node.innerHTML = "";
+    var url = document.createElement("a");
+    // url.className = "btn btn-success btn-radius-2";
+    url.style = "display:block;";
+    url.href = data.url;
+    url.innerHTML = "Website: " + data.url;
+    url.target = "_blank";
+    var phone = document.createElement("a");
+    // phone.className = "btn btn-success btn-radius-2";
+    phone.href = "tel:" + data.phone;
+    phone.style = "display:block;";
+    phone.innerHTML = "Telefon: " + data.phone;
+    var email = document.createElement("a");
+    // phone.className = "btn btn-success btn-radius-2";
+    email.href = "mailto:" + data.email;
+    email.style = "display:block;";
+    email.innerHTML = "E-Mail: " + data.email;
+    node.append(phone);
+    node.append(email);
+    node.append(url);
+  }
+  function setFacilitiesOnNode(data,type,node) {
+    node.innerHTML = "";
+    var icon = document.createElement("i");
+    icon.className = "demi-icon demi-icon-2x demi-icon-" + type;
+    var text = document.createElement("p");
+    text.innerHTML = data;
+    node.append(icon);
+    node.append(text);
+  }
 
+
+  function setMapsonNode(link,node) {
+    node.innerHTML = "";
+    var maps = document.createElement("a");
+    maps.className = "btn btn-success btn-radius-2";
+    maps.href = link;
+    maps.innerHTML = "Auf Google Maps anzeigen";
+    maps.target = "_blank";
+    node.append(maps);
+  }
+
+  function setWidgetOnNode(link,node) {
+    node.innerHTML = "";
+    var iframe = document.createElement("iframe");
+    iframe.src = link;
+    node.append(iframe);
+  }
   function hotelListOnNode(response,node) {
     node.innerHTML = "";
     var slick = document.createElement('div');

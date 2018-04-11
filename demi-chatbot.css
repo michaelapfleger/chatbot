@@ -1,0 +1,83 @@
+#chatbot .input-field {
+    padding-top: 20px;
+}
+#chatbot #q {
+    padding: 25px 20px 25px 10px;
+    font-size: 1em;
+    display: none;
+    border-color: #50341d52;
+}
+#chatbot #q:focus {
+    border-color: #50341d52;
+}
+#chatbot .chatbot-text-wrapper {
+    overflow: auto;
+    height: auto;
+}
+
+#chatbot .chatbot-icon {
+    background-image: url("/static/img/sprite/flower.png");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 30px;
+    width: 45px;
+    height: 45px;
+    display: inline;
+    float: left;
+    margin-top: 15px;
+    margin-right: 5px;
+    border: 1px solid #50341d52;
+    border-radius:100%;
+}
+
+#chatbot #result .chatbot-text {
+    width: auto;
+    display: inline-block;
+    padding: 20px;
+    margin: 0.5rem 0 1rem 0;
+    border-radius: 5px;
+    overflow-x: hidden;
+    max-width: 90%;
+}
+
+#chatbot #result .chatbot-text.right {
+    float: right;
+    background: rgba(162,155,119,.5);
+}
+#chatbot #result .chatbot-text.left {
+    float: left;
+}
+
+#chatbot #result .clearfix {
+    clear: both;
+}
+#chatbot .col-sm-12 .col-sm-6 {
+    float:left;
+}
+#chatbot .col-sm-12 .col-sm-6 .btn {
+    padding-top: 10px;
+    padding-bottom: 10px;
+    margin-top: 8px;
+}
+
+#chatbot .bold {
+    font-weight: bold;
+}
+
+#chatbot .content-box  {
+    min-height: 615px;
+}
+
+#chatbot #result .chatbot-text.images {
+    width: 100%;
+}
+#chatbot #result .chatbot-text.images .image-gallery {
+    float: left;
+}
+#chatbot #result iframe {
+    min-width: 900px;
+    height: 1000px;
+}
+#chatbot #result .demi-icon {
+    display: block;
+}
